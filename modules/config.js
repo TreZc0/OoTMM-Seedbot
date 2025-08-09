@@ -16,12 +16,12 @@ function loadConfig() {
   const token = cfg.token;
   const guildId = cfg.guildId;
   const cliPath = cfg.cliPath;
-  const presetsPath = cfg.presetsPath;
+  const presetsPath = cfg.presetsPath || path.join(cliPath, 'packages', 'core', 'config');
   const outPath = cfg.outPath || path.join(cliPath, 'packages', 'core', 'out');
   const maxParallel = cfg.maxParallel ?? DEFAULTS.maxParallel;
 
-  if (!token || !guildId || !cliPath || !presetsPath) {
-    throw new Error('config.json must include token, guildId, cliPath, presetsPath');
+  if (!token || !guildId || !cliPath) {
+    throw new Error('config.json must include token, guildId, cliPath');
   }
 
   return { token, guildId, cliPath, presetsPath, outPath, maxParallel };
