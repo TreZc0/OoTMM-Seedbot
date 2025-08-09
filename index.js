@@ -181,7 +181,7 @@ async function handleGenerate(interaction, seedType, presetValue) {
     startedAt: getNowMs(),
     completedAt: null,
     status: 'running',
-    cliCommand: `pnpm run start:core -- --config ${presetName}.yml`,
+    cliCommand: `pnpm run start:core -- --config ${presetFile}`,
     cliExitCode: null,
     error: null,
     seedHash: null,
@@ -226,7 +226,7 @@ async function handleGenerate(interaction, seedType, presetValue) {
     job.completedAt = getNowMs();
     job.status = 'failed';
     job.error = String(e && e.message || e);
-    logError('Generation failed', { presetName, error: job.error });
+    logError('Generation failed', { seedType, preset: presetValue, error: job.error });
     state.active = state.active.filter(j => j.id !== job.id);
     state.history.push({ ...job });
     save();
