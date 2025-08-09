@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { loadConfig } = require('./modules/config');
 const { createStateManager } = require('./modules/state');
-const { listSeedTypes, listAllPresets, resolvePresetFile } = require('./modules/presets');
+const { listSeedTypes, listAllPresets, resolvePresetFile, buildPresetChoices, resolvePresetSelection, prettyLabelFromName } = require('./modules/presets');
 const { Gate } = require('./modules/queue');
 const { runGeneration } = require('./modules/generator');
 const { formatDuration, getNowMs, logDebug, logInfo, logError } = require('./modules/util');
@@ -12,9 +12,9 @@ const cfg = loadConfig();
 const { state, save } = createStateManager();
 const semaphore = new Gate(cfg.maxParallel);
 
-function buildCommands(seedTypes, presetNames) {
+function buildCommands(seedTypes, presetChoicesInput) {
   const seedTypeChoices = seedTypes.slice(0, 25).map(n => ({ name: n, value: n }));
-  const presetChoices = presetNames.slice(0, 25).map(n => ({ name: n, value: n }));
+  const presetChoices = presetChoicesInput.slice(0, 25).map(c => ({ name: c.label, value: c.value }));
 
   const prepare = new SlashCommandBuilder()
     .setName('prepare')
@@ -58,10 +58,10 @@ async function registerCommands(client, seedTypes, presetNames) {
   await rest.put(Routes.applicationGuildCommands(client.user.id, cfg.guildId), { body });
 }
 
-async function handlePrepare(interaction, seedType, presetName) {
-  const presetFile = resolvePresetFile(cfg.presetsPath, seedType, presetName);
+async function handlePrepare(interaction, seedType, presetValue) {
+  const presetFile = resolvePresetSelection(cfg.presetsPath, seedType, presetValue);
   if (!fs.existsSync(presetFile)) {
-    return interaction.reply({ content: `Preset not found: ${presetName}`, flags: MessageFlags.Ephemeral });
+    return interaction.reply({ content: `Preset not found: ${presetValue}`, flags: MessageFlags.Ephemeral });
   }
 
   const tryRelease = semaphore.tryAcquire();
@@ -69,9 +69,12 @@ async function handlePrepare(interaction, seedType, presetName) {
     return interaction.reply({ content: `Generation queue is full. Please wait and try again.`, flags: MessageFlags.Ephemeral });
   }
   const release = tryRelease;
+  const resolvedPresetName = path.basename(presetFile, path.extname(presetFile));
   const job = {
     id: interaction.id,
-    presetName,
+    presetName: presetValue,
+    seedType,
+    resolvedPresetName,
     authorId: interaction.user.id,
     channelId: interaction.channelId,
     source: 'prepare',
@@ -80,7 +83,7 @@ async function handlePrepare(interaction, seedType, presetName) {
     startedAt: getNowMs(),
     completedAt: null,
     status: 'running',
-    cliCommand: `pnpm run start:core -- --config ${presetName}.yml`,
+    cliCommand: `pnpm run start:core -- --config ${presetFile}`,
     cliExitCode: null,
     error: null,
     seedHash: null,
@@ -92,10 +95,10 @@ async function handlePrepare(interaction, seedType, presetName) {
   };
   state.active.push(job); save();
 
-  await interaction.reply({ content: `Preparing seed for preset “${presetName}”… This can take a few minutes.`, flags: MessageFlags.Ephemeral });
+  await interaction.reply({ content: `Preparing seed for ${seedType} / “${presetValue}”… This can take a few minutes.`, flags: MessageFlags.Ephemeral });
 
   try {
-    logDebug('Starting preparation generation', { presetName, authorId: interaction.user.id });
+    logDebug('Starting preparation generation', { seedType, preset: presetValue, authorId: interaction.user.id });
     const done = await runGeneration({ cliPath: cfg.cliPath, outPath: cfg.outPath, configPath: presetFile });
     job.seedHash = done.seedHash;
     job.outDir = done.outDir;
@@ -105,9 +108,10 @@ async function handlePrepare(interaction, seedType, presetName) {
     job.cliExitCode = done.cliExitCode;
     job.completedAt = getNowMs();
     job.status = 'completed';
-    logInfo('Preparation completed', { presetName, seedHash: job.seedHash, durationMs: job.durationMs });
-    if (!state.backlog[presetName]) state.backlog[presetName] = [];
-    state.backlog[presetName].push(job);
+    logInfo('Preparation completed', { seedType, preset: presetValue, seedHash: job.seedHash, durationMs: job.durationMs });
+    const backlogKey = `${seedType}:${presetValue}`;
+    if (!state.backlog[backlogKey]) state.backlog[backlogKey] = [];
+    state.backlog[backlogKey].push(job);
     state.history.push({ ...job });
     // keep in active for audit or remove; here we remove from active
     state.active = state.active.filter(j => j.id !== job.id);
@@ -116,7 +120,7 @@ async function handlePrepare(interaction, seedType, presetName) {
     job.completedAt = getNowMs();
     job.status = 'failed';
     job.error = String(e && e.message || e);
-    logError('Preparation failed', { presetName, error: job.error });
+    logError('Preparation failed', { seedType, preset: presetValue, error: job.error });
     state.active = state.active.filter(j => j.id !== job.id);
     state.history.push({ ...job });
     save();
@@ -128,21 +132,23 @@ async function handlePrepare(interaction, seedType, presetName) {
 
 async function deliverPrepared(interaction, preparedJob) {
   const files = preparedJob.patchFiles.map(fp => ({ attachment: fp, name: path.basename(fp) }));
-  const content = `<@${interaction.user.id}> Seed ready for preset “${preparedJob.presetName}”. Seed: ${preparedJob.seedHash}. Took ${formatDuration(preparedJob.durationMs)}.`;
+  const presetLabel = preparedJob.resolvedPresetName ? prettyLabelFromName(preparedJob.resolvedPresetName) : preparedJob.presetName;
+  const content = `<@${interaction.user.id}> Seed ready for ${preparedJob.seedType} / “${presetLabel}”. Seed: ${preparedJob.seedHash}. Took ${formatDuration(preparedJob.durationMs)}.`;
   const sent = await interaction.channel.send({ content, files });
   preparedJob.messageId = sent.id;
   state.lastPerUser[interaction.user.id] = preparedJob.id;
   save();
 }
 
-async function handleGenerate(interaction, seedType, presetName) {
-  const presetFile = resolvePresetFile(cfg.presetsPath, seedType, presetName);
+async function handleGenerate(interaction, seedType, presetValue) {
+  const presetFile = resolvePresetSelection(cfg.presetsPath, seedType, presetValue);
   if (!fs.existsSync(presetFile)) {
-    return interaction.reply({ content: `Preset not found: ${presetName}`, ephemeral: true });
+    return interaction.reply({ content: `Preset not found: ${presetValue}`, ephemeral: true });
   }
 
   // Use backlog if available
-  const backlogArr = state.backlog[presetName] || [];
+  const backlogKey = `${seedType}:${presetValue}`;
+  const backlogArr = state.backlog[backlogKey] || [];
   if (backlogArr.length > 0) {
     const prepared = backlogArr.shift();
     save();
@@ -161,9 +167,12 @@ async function handleGenerate(interaction, seedType, presetName) {
     return interaction.reply({ content: `Generation queue is full. Please wait and try again.`, flags: MessageFlags.Ephemeral });
   }
   const release = tryRelease;
+  const resolvedPresetName = path.basename(presetFile, path.extname(presetFile));
   const job = {
     id: interaction.id,
-    presetName,
+    presetName: presetValue,
+    seedType,
+    resolvedPresetName,
     authorId: interaction.user.id,
     channelId: interaction.channelId,
     source: 'generate',
@@ -184,10 +193,14 @@ async function handleGenerate(interaction, seedType, presetName) {
   };
   state.active.push(job); save();
 
-  await interaction.reply({ content: `Generating seed for preset “${presetName}”… This can take several minutes.` });
+  const isRandom = typeof presetValue === 'string' && presetValue.startsWith('random:');
+  const base = isRandom ? presetValue.slice('random:'.length) : presetValue;
+  const header = isRandom ? `I will pick a random ${prettyLabelFromName(base)} preset. Good luck!` : '';
+  const body = `Generating seed for ${seedType} / “${presetValue}”… This can take several minutes.`;
+  await interaction.reply({ content: header ? `${header}\n${body}` : body });
 
   try {
-    logDebug('Starting generation', { presetName, authorId: interaction.user.id });
+    logDebug('Starting generation', { seedType, preset: presetValue, authorId: interaction.user.id });
     const done = await runGeneration({ cliPath: cfg.cliPath, outPath: cfg.outPath, configPath: presetFile });
     job.seedHash = done.seedHash;
     job.outDir = done.outDir;
@@ -197,13 +210,14 @@ async function handleGenerate(interaction, seedType, presetName) {
     job.cliExitCode = done.cliExitCode;
     job.completedAt = getNowMs();
     job.status = 'completed';
-    logInfo('Generation completed', { presetName, seedHash: job.seedHash, durationMs: job.durationMs });
+    logInfo('Generation completed', { seedType, preset: presetValue, seedHash: job.seedHash, durationMs: job.durationMs });
     state.history.push({ ...job });
     state.active = state.active.filter(j => j.id !== job.id);
     save();
 
     const files = job.patchFiles.map(fp => ({ attachment: fp, name: path.basename(fp) }));
-    const content = `<@${interaction.user.id}> Seed ready for preset “${presetName}”. Seed: ${job.seedHash}. Took ${formatDuration(job.durationMs)}.`;
+    const presetLabel = job.resolvedPresetName ? prettyLabelFromName(job.resolvedPresetName) : presetValue;
+    const content = `<@${interaction.user.id}> Seed ready for ${seedType} / “${presetLabel}”. Seed: ${job.seedHash}. Took ${formatDuration(job.durationMs)}.`;
     const sent = await interaction.channel.send({ content, files });
     job.messageId = sent.id;
     state.lastPerUser[interaction.user.id] = job.id;
@@ -251,12 +265,12 @@ async function main() {
   });
 
   const seedTypes = listSeedTypes(cfg.presetsPath);
-  const presetNames = listAllPresets(cfg.presetsPath);
+  const { presetChoices } = buildPresetChoices(cfg.presetsPath);
 
   client.once('ready', async () => {
     try {
-      await registerCommands(client, seedTypes, presetNames);
-      logInfo(`Bot ready as ${client.user.tag}. Registered ${presetNames.length} presets. Guild: ${cfg.guildId}`);
+      await registerCommands(client, seedTypes, presetChoices);
+      logInfo(`Bot ready as ${client.user.tag}. Registered ${presetChoices.length} presets. Guild: ${cfg.guildId}`);
     } catch (e) {
       logError('Failed to register commands', e);
       process.exitCode = 1;
