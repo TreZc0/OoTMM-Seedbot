@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { loadConfig } = require('./modules/config');
 const { createStateManager } = require('./modules/state');
-const { listPresetNames, scanPresets } = require('./modules/presets');
+const { listSeedTypes, listAllPresets, resolvePresetFile } = require('./modules/presets');
 const { Gate } = require('./modules/queue');
 const { runGeneration } = require('./modules/generator');
 const { formatDuration, getNowMs, logDebug, logInfo, logError } = require('./modules/util');
@@ -12,14 +12,20 @@ const cfg = loadConfig();
 const { state, save } = createStateManager();
 const semaphore = new Gate(cfg.maxParallel);
 
-function buildCommands(presetNames) {
+function buildCommands(seedTypes, presetNames) {
+  const seedTypeChoices = seedTypes.slice(0, 25).map(n => ({ name: n, value: n }));
   const presetChoices = presetNames.slice(0, 25).map(n => ({ name: n, value: n }));
 
   const prepare = new SlashCommandBuilder()
     .setName('prepare')
     .setDescription('Prepare a seed for a preset without posting it')
     .addStringOption((opt) => {
-      opt.setName('preset').setDescription('Preset to prepare').setRequired(true);
+      opt.setName('seedtype').setDescription('Seed type').setRequired(true);
+      if (seedTypeChoices.length > 0) opt.addChoices(...seedTypeChoices);
+      return opt;
+    })
+    .addStringOption((opt) => {
+      opt.setName('preset').setDescription('Preset').setRequired(true);
       if (presetChoices.length > 0) opt.addChoices(...presetChoices);
       return opt;
     });
@@ -28,7 +34,12 @@ function buildCommands(presetNames) {
     .setName('generate')
     .setDescription('Generate a seed for a preset or use a prepared one')
     .addStringOption((opt) => {
-      opt.setName('preset').setDescription('Preset to generate').setRequired(true);
+      opt.setName('seedtype').setDescription('Seed type').setRequired(true);
+      if (seedTypeChoices.length > 0) opt.addChoices(...seedTypeChoices);
+      return opt;
+    })
+    .addStringOption((opt) => {
+      opt.setName('preset').setDescription('Preset').setRequired(true);
       if (presetChoices.length > 0) opt.addChoices(...presetChoices);
       return opt;
     });
@@ -41,15 +52,14 @@ function buildCommands(presetNames) {
   return [prepare, generate, spoiler].map(c => c.toJSON());
 }
 
-async function registerCommands(client, presetNames) {
+async function registerCommands(client, seedTypes, presetNames) {
   const rest = new REST({ version: '10' }).setToken(cfg.token);
-  const body = buildCommands(presetNames);
+  const body = buildCommands(seedTypes, presetNames);
   await rest.put(Routes.applicationGuildCommands(client.user.id, cfg.guildId), { body });
 }
 
-async function handlePrepare(interaction, presetName) {
-  const presetEntry = scanPresets(cfg.presetsPath).find(p => p.label === presetName);
-  const presetFile = presetEntry ? path.join(cfg.presetsPath, presetEntry.relPath) : path.join(cfg.presetsPath, `${presetName}.yml`);
+async function handlePrepare(interaction, seedType, presetName) {
+  const presetFile = resolvePresetFile(cfg.presetsPath, seedType, presetName);
   if (!fs.existsSync(presetFile)) {
     return interaction.reply({ content: `Preset not found: ${presetName}`, flags: MessageFlags.Ephemeral });
   }
@@ -125,9 +135,8 @@ async function deliverPrepared(interaction, preparedJob) {
   save();
 }
 
-async function handleGenerate(interaction, presetName) {
-  const presetEntry = scanPresets(cfg.presetsPath).find(p => p.label === presetName);
-  const presetFile = presetEntry ? path.join(cfg.presetsPath, presetEntry.relPath) : path.join(cfg.presetsPath, `${presetName}.yml`);
+async function handleGenerate(interaction, seedType, presetName) {
+  const presetFile = resolvePresetFile(cfg.presetsPath, seedType, presetName);
   if (!fs.existsSync(presetFile)) {
     return interaction.reply({ content: `Preset not found: ${presetName}`, ephemeral: true });
   }
@@ -175,7 +184,7 @@ async function handleGenerate(interaction, presetName) {
   };
   state.active.push(job); save();
 
-  await interaction.reply({ content: `Generating seed for preset “${presetName}”… This can take several minutes.`, flags: MessageFlags.Ephemeral });
+  await interaction.reply({ content: `Generating seed for preset “${presetName}”… This can take several minutes.` });
 
   try {
     logDebug('Starting generation', { presetName, authorId: interaction.user.id });
@@ -228,7 +237,7 @@ async function handleSpoiler(interaction, makePublic) {
   } else {
     try {
       await interaction.user.send({ content: `Spoiler for seed ${job.seedHash}`, files: [{ attachment: job.spoilerFile, name: path.basename(job.spoilerFile) }] });
-      await interaction.reply({ content: 'Sent you the spoiler via DM.', flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: `<@${interaction.user.id}> requested the spoiler for seed ${job.seedHash}. Sent via DM.` });
     } catch (e) {
       await interaction.reply({ content: 'Could not DM you. Please enable DMs from server members or use /spoiler public:true.', flags: MessageFlags.Ephemeral });
     }
@@ -241,11 +250,12 @@ async function main() {
     partials: [Partials.Channel],
   });
 
-  const presetNames = listPresetNames(cfg.presetsPath);
+  const seedTypes = listSeedTypes(cfg.presetsPath);
+  const presetNames = listAllPresets(cfg.presetsPath);
 
   client.once('ready', async () => {
     try {
-      await registerCommands(client, presetNames);
+      await registerCommands(client, seedTypes, presetNames);
       logInfo(`Bot ready as ${client.user.tag}. Registered ${presetNames.length} presets. Guild: ${cfg.guildId}`);
     } catch (e) {
       logError('Failed to register commands', e);
@@ -258,11 +268,13 @@ async function main() {
       if (!interaction.isChatInputCommand()) return;
       const name = interaction.commandName;
       if (name === 'prepare') {
+        const seedType = interaction.options.getString('seedtype', true);
         const preset = interaction.options.getString('preset', true);
-        await handlePrepare(interaction, preset);
+        await handlePrepare(interaction, seedType, preset);
       } else if (name === 'generate') {
+        const seedType = interaction.options.getString('seedtype', true);
         const preset = interaction.options.getString('preset', true);
-        await handleGenerate(interaction, preset);
+        await handleGenerate(interaction, seedType, preset);
       } else if (name === 'spoiler') {
         const makePublic = interaction.options.getBoolean('public') || false;
         await handleSpoiler(interaction, makePublic);
