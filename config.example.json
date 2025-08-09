@@ -1,0 +1,10 @@
+{
+  "token": "YOUR_DISCORD_BOT_TOKEN",
+  "guildId": "123456789012345678",
+  "cliPath": "/var/source/OoTMM",
+  "presetsPath": "/var/source/OoTMM/presets",
+  "maxParallel": 2,
+  "outPath": "/var/source/OoTMM/packages/core/out"
+}
+
+

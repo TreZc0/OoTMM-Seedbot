@@ -1,0 +1,29 @@
+{
+  "name": "ootmm-seedbot",
+  "version": "0.1.0",
+  "description": "A Discord Bot for OoTMM Seed generation",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Randomizer",
+    "DiscordJS",
+    "NodeJS",
+    "OoTMM",
+    "Zelda",
+    "Randomizer",
+    "Queue"
+  ],
+  "author": "TreZc0_",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "bufferutil": "^4.0.9",
+    "discord.js": "^14.21.0",
+    "zlib-sync": "^0.1.10"
+  }
+}
