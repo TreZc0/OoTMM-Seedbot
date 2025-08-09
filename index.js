@@ -149,7 +149,7 @@ async function deliverPrepared(interaction, preparedJob) {
     return preparedJob.resolvedPresetName ? prettyLabelFromName(preparedJob.resolvedPresetName) : prettyLabelFromName(preparedJob.presetName);
   })();
   const seedTypeLabel = prettySeedTypeLabel(preparedJob.seedType);
-  const content = `<@${interaction.user.id}> **Your seed is ready**!\n It was rolled with the ${presetLabel} (${seedTypeLabel}) preset.\nSeed: ${preparedJob.seedHash}.\nTook ${formatDuration(preparedJob.durationMs)}.`;
+  const content = `<@${interaction.user.id}> **Your seed is ready**!\n It was rolled with the ${presetLabel} (${seedTypeLabel}) preset.\nSeed-Hash: ${preparedJob.seedHash}.\nTook ${formatDuration(preparedJob.durationMs)}.`;
   const sent = await interaction.channel.send({ content, files });
   preparedJob.messageId = sent.id;
   state.lastPerUser[interaction.user.id] = preparedJob.id;
@@ -185,7 +185,7 @@ async function handleGenerate(interaction, seedType, presetValue) {
   if (backlogArr.length > 0) {
     const prepared = backlogArr.shift();
     save();
-    const fluff = "Nevermind, I found something in TreZ's basement. Here's an old seed he had lying around for some reason.";
+    const fluff = "No need to generate a seed! I found something ready in TreZ's basement. Here's an old seed he had lying around for some reason.";
     if (interaction.replied || interaction.deferred) {
       await interaction.followUp({ content: fluff });
     } else {
@@ -261,7 +261,7 @@ async function handleGenerate(interaction, seedType, presetValue) {
       return job.resolvedPresetName ? prettyLabelFromName(job.resolvedPresetName) : prettyLabelFromName(presetValue);
     })();
     const seedTypeLabel2 = prettySeedTypeLabel(seedType);
-    const content = `<@${interaction.user.id}> **Your seed is ready**!\n It was rolled with the ${presetLabel} (${seedTypeLabel}) preset.\nSeed: ${preparedJob.seedHash}.\nTook ${formatDuration(preparedJob.durationMs)}.`;
+    const content = `<@${interaction.user.id}> **Your seed is ready**!\n It was rolled with the ${presetLabel} (${seedTypeLabel}) preset.\nSeed-Hash: ${preparedJob.seedHash}.\nTook ${formatDuration(preparedJob.durationMs)}.`;
     const sent = await interaction.channel.send({ content, files });
     job.messageId = sent.id;
     state.lastPerUser[interaction.user.id] = job.id;
