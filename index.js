@@ -156,7 +156,10 @@ async function deliverPrepared(interaction, preparedJob) {
     return preparedJob.resolvedPresetName ? prettyLabelFromName(preparedJob.resolvedPresetName) : prettyLabelFromName(preparedJob.presetName);
   })();
   const seedTypeLabel = prettySeedTypeLabel(preparedJob.seedType);
-  const content = `<@${interaction.user.id}> **Your seed is ready**!\n It was rolled with the ${presetLabel} (${seedTypeLabel}) preset.\nSeed-Hash: ${preparedJob.seedHash}.\nTook ${formatDuration(preparedJob.durationMs)}.`;
+  const rolledLine = isRandom
+    ? `It was rolled with a random ${presetLabel.replace(' (random)', '')} (${seedTypeLabel}) preset. The full preset choice will be visible once you open the seed.`
+    : `It was rolled with the ${presetLabel} (${seedTypeLabel}) preset.`;
+  const content = `<@${interaction.user.id}> **Your seed is ready**!\n ${rolledLine}\nSeed-Hash: ${preparedJob.seedHash}.\nTook ${formatDuration(preparedJob.durationMs)}.`;
   const sent = await interaction.channel.send({ content, files });
   preparedJob.messageId = sent.id;
   state.lastPerUser[interaction.user.id] = preparedJob.id;
@@ -261,8 +264,8 @@ async function handleGenerate(interaction, seedType, presetValue) {
     save();
 
     const files = job.patchFiles.map(fp => ({ attachment: fp, name: path.basename(fp) }));
+    const random = typeof presetValue === 'string' && presetValue.startsWith('random:');
     const presetLabel = (() => {
-      const random = typeof presetValue === 'string' && presetValue.startsWith('random:');
       if (random) {
         const base = presetValue.slice('random:'.length);
         return `${prettyLabelFromName(base)} (random)`;
@@ -270,7 +273,10 @@ async function handleGenerate(interaction, seedType, presetValue) {
       return job.resolvedPresetName ? prettyLabelFromName(job.resolvedPresetName) : prettyLabelFromName(presetValue);
     })();
     const seedTypeLabel2 = prettySeedTypeLabel(seedType);
-    const content = `<@${interaction.user.id}> **Your seed is ready**!\n It was rolled with the ${presetLabel} (${seedTypeLabel2}) preset.\nSeed-Hash: ${job.seedHash}.\nTook ${formatDuration(job.durationMs)}.`;
+    const rolledLine2 = random
+      ? `It was rolled with a random ${presetLabel.replace(' (random)', '')} (${seedTypeLabel2}) preset. The full preset choice will be visible when you open the seed.`
+      : `It was rolled with the ${presetLabel} (${seedTypeLabel2}) preset.`;
+    const content = `<@${interaction.user.id}> **Your seed is ready**!\n ${rolledLine2}\nSeed-Hash: ${job.seedHash}.\nTook ${formatDuration(job.durationMs)}.`;
     const sent = await interaction.channel.send({ content, files });
     job.messageId = sent.id;
     state.lastPerUser[interaction.user.id] = job.id;
