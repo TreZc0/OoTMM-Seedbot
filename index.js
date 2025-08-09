@@ -129,7 +129,7 @@ async function handlePrepare(interaction, seedType, presetValue) {
     save();
 
     // Ephemeral completion notice
-    const doneMsg = `Preparation complete for ${seedTypeLabelPrep} / “${presetStartLabelPrep}”.\nSeed-Hash: ${job.seedHash}. Took ${formatDuration(job.durationMs)}.`;
+    const doneMsg = `Preparation complete. It was rolled with the ${presetStartLabelPrep} (${seedTypeLabelPrep}) preset.\nSeed-Hash: ${job.seedHash}. Took ${formatDuration(job.durationMs)}.`;
     try { await interaction.followUp({ content: doneMsg, flags: MessageFlags.Ephemeral }); } catch (_) {}
   } catch (e) {
     job.completedAt = getNowMs();
