@@ -103,7 +103,7 @@ async function handlePrepare(interaction, seedType, presetValue) {
   const basePrep = isRandomPrep ? presetValue.slice('random:'.length) : presetValue;
   const seedTypeLabelPrep = prettySeedTypeLabel(seedType);
   const presetStartLabelPrep = isRandomPrep ? `${prettyLabelFromName(basePrep)} (random)` : prettyLabelFromName(presetValue);
-  await interaction.reply({ content: `Preparing seed for ${seedTypeLabelPrep} / “${presetStartLabelPrep}”… This can take a few minutes.`, flags: MessageFlags.Ephemeral });
+  await interaction.reply({ content: `Sure thing! I started generating a seed with the ${prettyPreset} (${seedTypeLabel}) preset. It will not be posted publicly, but available if another user runs /generate with this preset.\nThis can take a few minutes.`, flags: MessageFlags.Ephemeral });
 
   try {
     logDebug('Starting preparation generation', { seedType, preset: presetValue, authorId: interaction.user.id });
@@ -168,7 +168,7 @@ async function handleInfo(interaction) {
       { name: 'Concurrency', value: `Up to ${cfg.maxParallel} seed(s) can be rolled at the same time.` },
       { name: 'Outputs', value: 'When ready, the bot posts .ootmm patch file(s) and the seed hash which you can compare to your patch file name. Spoilers are never posted automatically; use /spoiler to retrieve them (DM by default).' }
     )
-    .setFooter({ text: 'OoTMM Seedbot' });
+    .setFooter({ text: 'OoTMM Seedbot created by TreZ' });
 
   await interaction.reply({ embeds: [embed] });
 }
@@ -261,7 +261,7 @@ async function handleGenerate(interaction, seedType, presetValue) {
       return job.resolvedPresetName ? prettyLabelFromName(job.resolvedPresetName) : prettyLabelFromName(presetValue);
     })();
     const seedTypeLabel2 = prettySeedTypeLabel(seedType);
-    const content = `<@${interaction.user.id}> Seed ready for ${seedTypeLabel2} / “${presetLabel}”. Seed: ${job.seedHash}. Took ${formatDuration(job.durationMs)}.`;
+    const content = `<@${interaction.user.id}> **Your seed is ready**!\n It was rolled with the ${presetLabel} (${seedTypeLabel}) preset.\nSeed: ${preparedJob.seedHash}.\nTook ${formatDuration(preparedJob.durationMs)}.`;
     const sent = await interaction.channel.send({ content, files });
     job.messageId = sent.id;
     state.lastPerUser[interaction.user.id] = job.id;
