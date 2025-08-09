@@ -35,9 +35,9 @@ async function waitForOutputs(outPath, seedHash, timeoutMs = 120 * 60 * 1000) {
   throw new Error('Timed out waiting for output files');
 }
 
-async function runGeneration({ cliPath, outPath, presetName }) {
+async function runGeneration({ cliPath, outPath, configPath }) {
   const startedAt = Date.now();
-  const args = ['run', 'start:core', '--', '--config', `${presetName}.yml`];
+  const args = ['run', 'start:core', '--', '--config', configPath];
   const child = spawn('pnpm', args, { cwd: cliPath, shell: true });
 
   let seedHash = null;

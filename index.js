@@ -1,9 +1,9 @@
-const { Client, GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder, AttachmentBuilder, InteractionContextType } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder, AttachmentBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const fs = require('fs');
 const { loadConfig } = require('./modules/config');
 const { createStateManager } = require('./modules/state');
-const { listPresetNames } = require('./modules/presets');
+const { listPresetNames, scanPresets } = require('./modules/presets');
 const { Gate } = require('./modules/queue');
 const { runGeneration } = require('./modules/generator');
 const { formatDuration, getNowMs, logDebug, logInfo, logError } = require('./modules/util');
@@ -48,14 +48,15 @@ async function registerCommands(client, presetNames) {
 }
 
 async function handlePrepare(interaction, presetName) {
-  const presetFile = path.join(cfg.presetsPath, `${presetName}.yml`);
+  const presetEntry = scanPresets(cfg.presetsPath).find(p => p.label === presetName);
+  const presetFile = presetEntry ? path.join(cfg.presetsPath, presetEntry.relPath) : path.join(cfg.presetsPath, `${presetName}.yml`);
   if (!fs.existsSync(presetFile)) {
-    return interaction.reply({ content: `Preset not found: ${presetName}`, ephemeral: true });
+    return interaction.reply({ content: `Preset not found: ${presetName}`, flags: MessageFlags.Ephemeral });
   }
 
   const tryRelease = semaphore.tryAcquire();
   if (!tryRelease) {
-    return interaction.reply({ content: `Generation queue is full. Please wait and try again.`, ephemeral: true });
+    return interaction.reply({ content: `Generation queue is full. Please wait and try again.`, flags: MessageFlags.Ephemeral });
   }
   const release = tryRelease;
   const job = {
@@ -81,11 +82,11 @@ async function handlePrepare(interaction, presetName) {
   };
   state.active.push(job); save();
 
-  await interaction.reply({ content: `Preparing seed for preset “${presetName}”… This can take a few minutes.`, ephemeral: true });
+  await interaction.reply({ content: `Preparing seed for preset “${presetName}”… This can take a few minutes.`, flags: MessageFlags.Ephemeral });
 
   try {
     logDebug('Starting preparation generation', { presetName, authorId: interaction.user.id });
-    const done = await runGeneration({ cliPath: cfg.cliPath, outPath: cfg.outPath, presetName });
+    const done = await runGeneration({ cliPath: cfg.cliPath, outPath: cfg.outPath, configPath: presetFile });
     job.seedHash = done.seedHash;
     job.outDir = done.outDir;
     job.patchFiles = done.patchFiles;
@@ -109,7 +110,7 @@ async function handlePrepare(interaction, presetName) {
     state.active = state.active.filter(j => j.id !== job.id);
     state.history.push({ ...job });
     save();
-    try { await interaction.followUp({ content: `Preparation failed: ${job.error}`, ephemeral: true }); } catch (_) {}
+    try { await interaction.followUp({ content: `Preparation failed: ${job.error}`, flags: MessageFlags.Ephemeral }); } catch (_) {}
   } finally {
     release();
   }
@@ -125,7 +126,8 @@ async function deliverPrepared(interaction, preparedJob) {
 }
 
 async function handleGenerate(interaction, presetName) {
-  const presetFile = path.join(cfg.presetsPath, `${presetName}.yml`);
+  const presetEntry = scanPresets(cfg.presetsPath).find(p => p.label === presetName);
+  const presetFile = presetEntry ? path.join(cfg.presetsPath, presetEntry.relPath) : path.join(cfg.presetsPath, `${presetName}.yml`);
   if (!fs.existsSync(presetFile)) {
     return interaction.reply({ content: `Preset not found: ${presetName}`, ephemeral: true });
   }
@@ -138,7 +140,7 @@ async function handleGenerate(interaction, presetName) {
     if (interaction.replied || interaction.deferred) {
       await deliverPrepared(interaction, prepared);
     } else {
-      await interaction.reply({ content: 'Using a prepared seed…' , ephemeral: true });
+      await interaction.reply({ content: 'Using a prepared seed…' , flags: MessageFlags.Ephemeral });
       await deliverPrepared(interaction, prepared);
     }
     return;
@@ -147,7 +149,7 @@ async function handleGenerate(interaction, presetName) {
   // Otherwise run full generation
   const tryRelease = semaphore.tryAcquire();
   if (!tryRelease) {
-    return interaction.reply({ content: `Generation queue is full. Please wait and try again.`, ephemeral: true });
+    return interaction.reply({ content: `Generation queue is full. Please wait and try again.`, flags: MessageFlags.Ephemeral });
   }
   const release = tryRelease;
   const job = {
@@ -173,11 +175,11 @@ async function handleGenerate(interaction, presetName) {
   };
   state.active.push(job); save();
 
-  await interaction.reply({ content: `Generating seed for preset “${presetName}”… This can take several minutes.`, ephemeral: true });
+  await interaction.reply({ content: `Generating seed for preset “${presetName}”… This can take several minutes.`, flags: MessageFlags.Ephemeral });
 
   try {
     logDebug('Starting generation', { presetName, authorId: interaction.user.id });
-    const done = await runGeneration({ cliPath: cfg.cliPath, outPath: cfg.outPath, presetName });
+    const done = await runGeneration({ cliPath: cfg.cliPath, outPath: cfg.outPath, configPath: presetFile });
     job.seedHash = done.seedHash;
     job.outDir = done.outDir;
     job.patchFiles = done.patchFiles;
@@ -205,7 +207,7 @@ async function handleGenerate(interaction, presetName) {
     state.active = state.active.filter(j => j.id !== job.id);
     state.history.push({ ...job });
     save();
-    try { await interaction.followUp({ content: `Generation failed: ${job.error}`, ephemeral: true }); } catch (_) {}
+    try { await interaction.followUp({ content: `Generation failed: ${job.error}`, flags: MessageFlags.Ephemeral }); } catch (_) {}
   } finally {
     release();
   }
@@ -214,11 +216,11 @@ async function handleGenerate(interaction, presetName) {
 async function handleSpoiler(interaction, makePublic) {
   const lastId = state.lastPerUser[interaction.user.id];
   if (!lastId) {
-    return interaction.reply({ content: 'No recent seed found for you.', ephemeral: true });
+    return interaction.reply({ content: 'No recent seed found for you.', flags: MessageFlags.Ephemeral });
   }
   const job = state.history.find(j => j.id === lastId) || state.active.find(j => j.id === lastId);
   if (!job || !job.spoilerFile || !fs.existsSync(job.spoilerFile)) {
-    return interaction.reply({ content: 'Spoiler file not found for your recent seed.', ephemeral: true });
+    return interaction.reply({ content: 'Spoiler file not found for your recent seed.', flags: MessageFlags.Ephemeral });
   }
 
   if (makePublic) {
@@ -226,9 +228,9 @@ async function handleSpoiler(interaction, makePublic) {
   } else {
     try {
       await interaction.user.send({ content: `Spoiler for seed ${job.seedHash}`, files: [{ attachment: job.spoilerFile, name: path.basename(job.spoilerFile) }] });
-      await interaction.reply({ content: 'Sent you the spoiler via DM.', ephemeral: true });
+      await interaction.reply({ content: 'Sent you the spoiler via DM.', flags: MessageFlags.Ephemeral });
     } catch (e) {
-      await interaction.reply({ content: 'Could not DM you. Please enable DMs from server members or use /spoiler public:true.', ephemeral: true });
+      await interaction.reply({ content: 'Could not DM you. Please enable DMs from server members or use /spoiler public:true.', flags: MessageFlags.Ephemeral });
     }
   }
 }
@@ -268,7 +270,7 @@ async function main() {
     } catch (e) {
       console.error('Command handling error', e);
       if (!interaction.replied) {
-        await interaction.reply({ content: 'An error occurred while handling your command.', ephemeral: true });
+        await interaction.reply({ content: 'An error occurred while handling your command.', flags: MessageFlags.Ephemeral });
       }
     }
   });
