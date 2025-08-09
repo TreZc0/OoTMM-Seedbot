@@ -161,7 +161,7 @@ async function deliverPrepared(interaction, preparedJob) {
   const rolledLine = isRandom
     ? `It was rolled with a random ${presetLabel.replace(' (random)', '')} (${seedTypeLabel}) preset. The full preset choice will be visible once the seed is opened.`
     : `It was rolled with the ${presetLabel} (${seedTypeLabel}) preset.`;
-  const content = `<@${interaction.user.id}> **Your seed is ready**!\n ${rolledLine}\nSeed-Hash: ${preparedJob.seedHash}.\nTook ${formatDuration(preparedJob.durationMs)}.`;
+  const content = `<@${interaction.user.id}> **Your seed is ready**!\n${rolledLine}\nSeed-Hash: ${preparedJob.seedHash}.\nTook ${formatDuration(preparedJob.durationMs)}.`;
   const sent = await interaction.channel.send({ content, files });
   preparedJob.messageId = sent.id;
   state.lastPerUser[interaction.user.id] = preparedJob.id;
@@ -245,8 +245,8 @@ async function handleGenerate(interaction, seedType, presetValue) {
   const prettyPreset = isRandom ? `${prettyLabelFromName(base)} (random)` : prettyLabelFromName(presetValue);
   const header = isRandom ? `I will pick a random ${prettyLabelFromName(base)} preset. Good luck!` : '';
   const body = isRandom
-    ? `Sure thing! I started generating your seed with a random ${prettyLabelFromName(base)} (${seedTypeLabel}) preset. The full preset choice will not be visible until you open the seed.\n Please be patient. This might take a while.`
-    : `Sure thing! I started generating your seed with the ${prettyPreset} (${seedTypeLabel}) preset.\n Please be patient. This might take a while.`;
+    ? `Sure thing! I started generating your seed with a random ${prettyLabelFromName(base)} (${seedTypeLabel}) preset. The full preset choice will not be visible until you open the seed.\nPlease be patient. This might take a while.`
+    : `Sure thing! I started generating your seed with the ${prettyPreset} (${seedTypeLabel}) preset.\nPlease be patient. This might take a while.`;
   await interaction.reply({ content: header ? `${header}\n${body}` : body });
 
   try {
@@ -278,7 +278,7 @@ async function handleGenerate(interaction, seedType, presetValue) {
     const rolledLine2 = random
       ? `It was rolled with a random ${presetLabel.replace(' (random)', '')} (${seedTypeLabel2}) preset. The full preset choice will be visible when you open the seed.`
       : `It was rolled with the ${presetLabel} (${seedTypeLabel2}) preset.`;
-    const content = `<@${interaction.user.id}> **Your seed is ready**!\n ${rolledLine2}\nSeed-Hash: ${job.seedHash}.\nTook ${formatDuration(job.durationMs)}.`;
+    const content = `<@${interaction.user.id}> **Your seed is ready**!\n${rolledLine2}\nSeed-Hash: ${job.seedHash}.\nTook ${formatDuration(job.durationMs)}.`;
     const sent = await interaction.channel.send({ content, files });
     job.messageId = sent.id;
     state.lastPerUser[interaction.user.id] = job.id;
