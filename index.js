@@ -145,7 +145,7 @@ async function deliverPrepared(interaction, preparedJob) {
     return preparedJob.resolvedPresetName ? prettyLabelFromName(preparedJob.resolvedPresetName) : prettyLabelFromName(preparedJob.presetName);
   })();
   const seedTypeLabel = prettySeedTypeLabel(preparedJob.seedType);
-  const content = `<@${interaction.user.id}> Seed ready for ${seedTypeLabel} / “${presetLabel}”. Seed: ${preparedJob.seedHash}. Took ${formatDuration(preparedJob.durationMs)}.`;
+  const content = `<@${interaction.user.id}> **Your seed is ready**!\n It was rolled with the ${presetLabel} (${seedTypeLabel}) preset.\nSeed: ${preparedJob.seedHash}.\nTook ${formatDuration(preparedJob.durationMs)}.`;
   const sent = await interaction.channel.send({ content, files });
   preparedJob.messageId = sent.id;
   state.lastPerUser[interaction.user.id] = preparedJob.id;
@@ -164,7 +164,7 @@ async function handleGenerate(interaction, seedType, presetValue) {
   if (backlogArr.length > 0) {
     const prepared = backlogArr.shift();
     save();
-    const fluff = "Nevermind, I found something in my basement. Here's an old seed I had lying around.";
+    const fluff = "Nevermind, I found something in TreZ's basement. Here's an old seed he had lying around for some reason.";
     if (interaction.replied || interaction.deferred) {
       await interaction.followUp({ content: fluff });
     } else {
@@ -211,7 +211,7 @@ async function handleGenerate(interaction, seedType, presetValue) {
   const seedTypeLabel = prettySeedTypeLabel(seedType);
   const prettyPreset = isRandom ? `${prettyLabelFromName(base)} (random)` : prettyLabelFromName(presetValue);
   const header = isRandom ? `I will pick a random ${prettyLabelFromName(base)} preset. Good luck!` : '';
-  const body = `Sure thing! I started generating seed with preset ${prettyPreset} (${seedTypeLabel}).\n Please be patient. This might take a while.`;
+  const body = `Sure thing! I started generating your seed with the ${prettyPreset} (${seedTypeLabel}) preset.\n Please be patient. This might take a while.`;
   await interaction.reply({ content: header ? `${header}\n${body}` : body });
 
   try {
@@ -262,7 +262,7 @@ async function handleGenerate(interaction, seedType, presetValue) {
 async function handleSpoiler(interaction, makePublic) {
   const lastId = state.lastPerUser[interaction.user.id];
   if (!lastId) {
-    return interaction.reply({ content: 'No recent seed found for you.', flags: MessageFlags.Ephemeral });
+    return interaction.reply({ content: 'I cannot find any recently generated seeds for you.', flags: MessageFlags.Ephemeral });
   }
   const job = state.history.find(j => j.id === lastId) || state.active.find(j => j.id === lastId);
   if (!job || !job.spoilerFile || !fs.existsSync(job.spoilerFile)) {
@@ -273,7 +273,7 @@ async function handleSpoiler(interaction, makePublic) {
     await interaction.reply({ content: `Spoiler for seed ${job.seedHash}`, files: [{ attachment: job.spoilerFile, name: path.basename(job.spoilerFile) }] });
   } else {
     try {
-      await interaction.user.send({ content: `Spoiler for seed ${job.seedHash}`, files: [{ attachment: job.spoilerFile, name: path.basename(job.spoilerFile) }] });
+      await interaction.user.send({ content: `Hey, here is the spoiler log for your seed ${job.seedHash}`, files: [{ attachment: job.spoilerFile, name: path.basename(job.spoilerFile) }] });
       await interaction.reply({ content: `<@${interaction.user.id}> requested the spoiler for seed ${job.seedHash}. Sent via DM.` });
     } catch (e) {
       await interaction.reply({ content: 'Could not DM you. Please enable DMs from server members or use /spoiler public:true.', flags: MessageFlags.Ephemeral });
