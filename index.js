@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder, AttachmentBuilder, MessageFlags } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder, AttachmentBuilder, MessageFlags, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const fs = require('fs');
 const { loadConfig } = require('./modules/config');
@@ -49,7 +49,11 @@ function buildCommands(seedTypes, presetChoicesInput) {
     .setDescription('Get the spoiler log of your most recent seed')
     .addBooleanOption((opt) => opt.setName('public').setDescription('Post publicly in this channel'));
 
-  return [prepare, generate, spoiler].map(c => c.toJSON());
+  const info = new SlashCommandBuilder()
+    .setName('info')
+    .setDescription('Show information about seed rolling and commands');
+
+  return [prepare, generate, spoiler, info].map(c => c.toJSON());
 }
 
 async function registerCommands(client, seedTypes, presetNames) {
@@ -150,6 +154,21 @@ async function deliverPrepared(interaction, preparedJob) {
   preparedJob.messageId = sent.id;
   state.lastPerUser[interaction.user.id] = preparedJob.id;
   save();
+}
+
+async function handleInfo(interaction) {
+  const embed = new EmbedBuilder()
+    .setTitle('OoTMM Seedbot')
+    .setDescription('Generate OoTMM seeds using presets and seed types, pre-roll seeds for use later, and fetch spoiler logs.')
+    .addFields(
+      { name: 'How it works', value: 'OoTMM Randomizer seeds are rolled based on your selected seed type (Solo, Solo Multiworld (3 Players), Race Multiworld (2 Teams of 3 players)) and preset. If the queue is full, please wait and try again. Random presets pick one of the available variant options.' },
+      { name: 'Commands', value: '**/prepare seedtype preset** – prepares a seed and stores it for later\n**/generate seedtype preset** – generates a new or provides you with a prepared seed\n**/spoiler** – gets the spoiler log for your most recent seed' },
+      { name: 'Concurrency', value: `Up to ${cfg.maxParallel} seed(s) can be rolled at the same time.` },
+      { name: 'Outputs', value: 'When ready, the bot posts .ootmm patch file(s) and the seed hash which you can compare to your patch file name. Spoilers are never posted automatically; use /spoiler to retrieve them (DM by default).' }
+    )
+    .setFooter({ text: 'OoTMM Seedbot' });
+
+  await interaction.reply({ embeds: [embed] });
 }
 
 async function handleGenerate(interaction, seedType, presetValue) {
@@ -315,6 +334,8 @@ async function main() {
       } else if (name === 'spoiler') {
         const makePublic = interaction.options.getBoolean('public') || false;
         await handleSpoiler(interaction, makePublic);
+      } else if (name === 'info') {
+        await handleInfo(interaction);
       }
     } catch (e) {
       console.error('Command handling error', e);
