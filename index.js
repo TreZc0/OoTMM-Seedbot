@@ -103,7 +103,10 @@ async function handlePrepare(interaction, seedType, presetValue) {
   const basePrep = isRandomPrep ? presetValue.slice('random:'.length) : presetValue;
   const seedTypeLabelPrep = prettySeedTypeLabel(seedType);
   const presetStartLabelPrep = isRandomPrep ? `${prettyLabelFromName(basePrep)} (random)` : prettyLabelFromName(presetValue);
-  await interaction.reply({ content: `Sure thing! I started generating a seed with the ${presetStartLabelPrep} (${seedTypeLabelPrep}) preset. It will not be posted publicly, but available if another user runs /generate with this preset.\nThis can take a few minutes.`, flags: MessageFlags.Ephemeral });
+  const introPrep = isRandomPrep
+    ? `Sure thing! I started generating a seed with a random ${prettyLabelFromName(basePrep)} (${seedTypeLabelPrep}) preset. The full preset choice will not be visible until you open the seed. It will not be posted publicly, but available if another user runs /generate with this preset.\nThis can take a few minutes.`
+    : `Sure thing! I started generating a seed with the ${presetStartLabelPrep} (${seedTypeLabelPrep}) preset. It will not be posted publicly, but available if another user runs /generate with this preset.\nThis can take a few minutes.`;
+  await interaction.reply({ content: introPrep, flags: MessageFlags.Ephemeral });
 
   try {
     logDebug('Starting preparation generation', { seedType, preset: presetValue, authorId: interaction.user.id });
@@ -232,7 +235,9 @@ async function handleGenerate(interaction, seedType, presetValue) {
   const seedTypeLabel = prettySeedTypeLabel(seedType);
   const prettyPreset = isRandom ? `${prettyLabelFromName(base)} (random)` : prettyLabelFromName(presetValue);
   const header = isRandom ? `I will pick a random ${prettyLabelFromName(base)} preset. Good luck!` : '';
-  const body = `Sure thing! I started generating your seed with the ${prettyPreset} (${seedTypeLabel}) preset.\n Please be patient. This might take a while.`;
+  const body = isRandom
+    ? `Sure thing! I started generating your seed with a random ${prettyLabelFromName(base)} (${seedTypeLabel}) preset. The full preset choice will not be visible until you open the seed.\n Please be patient. This might take a while.`
+    : `Sure thing! I started generating your seed with the ${prettyPreset} (${seedTypeLabel}) preset.\n Please be patient. This might take a while.`;
   await interaction.reply({ content: header ? `${header}\n${body}` : body });
 
   try {
