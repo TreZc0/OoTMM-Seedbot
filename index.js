@@ -18,7 +18,7 @@ function buildCommands(seedTypes, presetChoicesInput) {
 
   const prepare = new SlashCommandBuilder()
     .setName('prepare')
-    .setDescription('Prepare a seed for a preset without posting it')
+    .setDescription('Prepare a seed for a preset and store it for later')
     .addStringOption((opt) => {
       opt.setName('seedtype').setDescription('Seed type').setRequired(true);
       if (seedTypeChoices.length > 0) opt.addChoices(...seedTypeChoices);
@@ -32,7 +32,7 @@ function buildCommands(seedTypes, presetChoicesInput) {
 
   const generate = new SlashCommandBuilder()
     .setName('generate')
-    .setDescription('Generate a seed for a preset or use a prepared one')
+    .setDescription('Generate a seed for a preset')
     .addStringOption((opt) => {
       opt.setName('seedtype').setDescription('Seed type').setRequired(true);
       if (seedTypeChoices.length > 0) opt.addChoices(...seedTypeChoices);
@@ -164,12 +164,13 @@ async function handleGenerate(interaction, seedType, presetValue) {
   if (backlogArr.length > 0) {
     const prepared = backlogArr.shift();
     save();
+    const fluff = "Nevermind, I found something in my basement. Here's an old seed I had lying around.";
     if (interaction.replied || interaction.deferred) {
-      await deliverPrepared(interaction, prepared);
+      await interaction.followUp({ content: fluff });
     } else {
-      await interaction.reply({ content: 'Using a prepared seed…' , flags: MessageFlags.Ephemeral });
-      await deliverPrepared(interaction, prepared);
+      await interaction.reply({ content: fluff });
     }
+    await deliverPrepared(interaction, prepared);
     return;
   }
 
@@ -210,7 +211,7 @@ async function handleGenerate(interaction, seedType, presetValue) {
   const seedTypeLabel = prettySeedTypeLabel(seedType);
   const prettyPreset = isRandom ? `${prettyLabelFromName(base)} (random)` : prettyLabelFromName(presetValue);
   const header = isRandom ? `I will pick a random ${prettyLabelFromName(base)} preset. Good luck!` : '';
-  const body = `Generating seed for ${seedTypeLabel} / “${prettyPreset}”… This can take several minutes.`;
+  const body = `Sure thing! I started generating seed with preset ${prettyPreset} (${seedTypeLabel}).\n Please be patient. This might take a while.`;
   await interaction.reply({ content: header ? `${header}\n${body}` : body });
 
   try {
