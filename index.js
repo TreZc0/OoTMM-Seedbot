@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { loadConfig } = require('./modules/config');
 const { createStateManager } = require('./modules/state');
-const { listSeedTypes, listAllPresets, resolvePresetFile, buildPresetChoices, resolvePresetSelection, prettyLabelFromName } = require('./modules/presets');
+const { listSeedTypes, listAllPresets, resolvePresetFile, buildPresetChoices, resolvePresetSelection, prettyLabelFromName, prettySeedTypeLabel } = require('./modules/presets');
 const { Gate } = require('./modules/queue');
 const { runGeneration } = require('./modules/generator');
 const { formatDuration, getNowMs, logDebug, logInfo, logError } = require('./modules/util');
@@ -13,7 +13,7 @@ const { state, save } = createStateManager();
 const semaphore = new Gate(cfg.maxParallel);
 
 function buildCommands(seedTypes, presetChoicesInput) {
-  const seedTypeChoices = seedTypes.slice(0, 25).map(n => ({ name: n, value: n }));
+  const seedTypeChoices = seedTypes.slice(0, 25).map(n => ({ name: prettySeedTypeLabel(n), value: n }));
   const presetChoices = presetChoicesInput.slice(0, 25).map(c => ({ name: c.label, value: c.value }));
 
   const prepare = new SlashCommandBuilder()

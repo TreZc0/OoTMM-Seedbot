@@ -106,7 +106,16 @@ function resolvePresetSelection(presetsPath, seedType, presetValue) {
   return resolvePresetFile(presetsPath, seedType, pick);
 }
 
-module.exports = { scanSeedTypesAndPresets, listSeedTypes, listAllPresets, resolvePresetFile, buildPresetChoices, resolvePresetSelection, prettyLabelFromName };
+function prettySeedTypeLabel(name) {
+  const spaced = String(name || '').replace(/[-_]+/g, ' ').trim();
+  if (!spaced) return '';
+  return spaced.split(/\s+/).map(part => {
+    if (part.toLowerCase() === 'mw') return 'MW';
+    return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+  }).join(' ');
+}
+
+module.exports = { scanSeedTypesAndPresets, listSeedTypes, listAllPresets, resolvePresetFile, buildPresetChoices, resolvePresetSelection, prettyLabelFromName, prettySeedTypeLabel };
 
 
 
