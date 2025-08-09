@@ -6,7 +6,7 @@ const { createStateManager } = require('./modules/state');
 const { listPresetNames } = require('./modules/presets');
 const { Gate } = require('./modules/queue');
 const { runGeneration } = require('./modules/generator');
-const { formatDuration, getNowMs } = require('./modules/util');
+const { formatDuration, getNowMs, logDebug, logInfo, logError } = require('./modules/util');
 
 const cfg = loadConfig();
 const { state, save } = createStateManager();
@@ -84,6 +84,7 @@ async function handlePrepare(interaction, presetName) {
   await interaction.reply({ content: `Preparing seed for preset “${presetName}”… This can take a few minutes.`, ephemeral: true });
 
   try {
+    logDebug('Starting preparation generation', { presetName, authorId: interaction.user.id });
     const done = await runGeneration({ cliPath: cfg.cliPath, outPath: cfg.outPath, presetName });
     job.seedHash = done.seedHash;
     job.outDir = done.outDir;
@@ -93,6 +94,7 @@ async function handlePrepare(interaction, presetName) {
     job.cliExitCode = done.cliExitCode;
     job.completedAt = getNowMs();
     job.status = 'completed';
+    logInfo('Preparation completed', { presetName, seedHash: job.seedHash, durationMs: job.durationMs });
     if (!state.backlog[presetName]) state.backlog[presetName] = [];
     state.backlog[presetName].push(job);
     state.history.push({ ...job });
@@ -103,6 +105,7 @@ async function handlePrepare(interaction, presetName) {
     job.completedAt = getNowMs();
     job.status = 'failed';
     job.error = String(e && e.message || e);
+    logError('Preparation failed', { presetName, error: job.error });
     state.active = state.active.filter(j => j.id !== job.id);
     state.history.push({ ...job });
     save();
@@ -173,6 +176,7 @@ async function handleGenerate(interaction, presetName) {
   await interaction.reply({ content: `Generating seed for preset “${presetName}”… This can take several minutes.`, ephemeral: true });
 
   try {
+    logDebug('Starting generation', { presetName, authorId: interaction.user.id });
     const done = await runGeneration({ cliPath: cfg.cliPath, outPath: cfg.outPath, presetName });
     job.seedHash = done.seedHash;
     job.outDir = done.outDir;
@@ -182,6 +186,7 @@ async function handleGenerate(interaction, presetName) {
     job.cliExitCode = done.cliExitCode;
     job.completedAt = getNowMs();
     job.status = 'completed';
+    logInfo('Generation completed', { presetName, seedHash: job.seedHash, durationMs: job.durationMs });
     state.history.push({ ...job });
     state.active = state.active.filter(j => j.id !== job.id);
     save();
@@ -196,6 +201,7 @@ async function handleGenerate(interaction, presetName) {
     job.completedAt = getNowMs();
     job.status = 'failed';
     job.error = String(e && e.message || e);
+    logError('Generation failed', { presetName, error: job.error });
     state.active = state.active.filter(j => j.id !== job.id);
     state.history.push({ ...job });
     save();
@@ -238,9 +244,9 @@ async function main() {
   client.once('ready', async () => {
     try {
       await registerCommands(client, presetNames);
-      console.log(`Logged in as ${client.user.tag}. Registered ${presetNames.length} presets.`);
+      logInfo(`Bot ready as ${client.user.tag}. Registered ${presetNames.length} presets. Guild: ${cfg.guildId}`);
     } catch (e) {
-      console.error('Failed to register commands', e);
+      logError('Failed to register commands', e);
       process.exitCode = 1;
     }
   });

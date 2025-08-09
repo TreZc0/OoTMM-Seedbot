@@ -19,4 +19,16 @@ function safeJoin(...parts) {
   return path.join(...parts);
 }
 
-module.exports = { delay, formatDuration, getNowMs, safeJoin };
+function logDebug(...args) {
+  console.log('[DEBUG]', ...args);
+}
+
+function logInfo(...args) {
+  console.log('[INFO]', ...args);
+}
+
+function logError(...args) {
+  console.error('[ERROR]', ...args);
+}
+
+module.exports = { delay, formatDuration, getNowMs, safeJoin, logDebug, logInfo, logError };
