@@ -1,30 +1,39 @@
 const fs = require('fs');
 const path = require('path');
 
-function walkYml(root, relDir = '') {
+function walkPresets(root, relDir = '') {
   const absDir = path.join(root, relDir);
   const entries = fs.readdirSync(absDir, { withFileTypes: true });
   const results = [];
   for (const e of entries) {
     if (e.isDirectory()) {
-      results.push(...walkYml(root, path.join(relDir, e.name)));
-    } else if (e.isFile() && e.name.toLowerCase().endsWith('.yml')) {
-      const presetName = e.name.replace(/\.yml$/i, '');
-      const parts = relDir ? [relDir, presetName] : [presetName];
-      const label = parts.join(': ');
-      results.push(label);
+      results.push(...walkPresets(root, path.join(relDir, e.name)));
+    } else if (e.isFile()) {
+      const lower = e.name.toLowerCase();
+      if (lower.endsWith('.yml') || lower.endsWith('.yaml')) {
+        const ext = lower.endsWith('.yaml') ? '.yaml' : '.yml';
+        const baseName = e.name.replace(/\.(yml|yaml)$/i, '');
+        const topFolder = relDir ? relDir.split(path.sep)[0] : '';
+        const label = topFolder ? `${topFolder}: ${baseName}` : baseName;
+        const relPath = path.join(relDir, e.name).replace(/\\/g, '/');
+        results.push({ label, relPath });
+      }
     }
   }
   return results;
 }
 
-function listPresetNames(presetsPath) {
+function scanPresets(presetsPath) {
   if (!fs.existsSync(presetsPath)) return [];
-  const names = walkYml(presetsPath, '')
-    .sort((a, b) => a.localeCompare(b));
-  return names;
+  const items = walkPresets(presetsPath, '')
+    .sort((a, b) => a.label.localeCompare(b.label));
+  return items;
 }
 
-module.exports = { listPresetNames };
+function listPresetNames(presetsPath) {
+  return scanPresets(presetsPath).map(p => p.label);
+}
+
+module.exports = { scanPresets, listPresetNames };
 
 
