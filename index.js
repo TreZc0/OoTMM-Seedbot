@@ -129,7 +129,9 @@ async function handlePrepare(interaction, seedType, presetValue) {
     save();
 
     // Ephemeral completion notice
-    const doneMsg = `Preparation complete. It was rolled with the ${presetStartLabelPrep} (${seedTypeLabelPrep}) preset.\nSeed-Hash: ${job.seedHash}. Took ${formatDuration(job.durationMs)}.`;
+    const doneMsg = isRandomPrep
+      ? `Preparation complete. It was rolled with a random ${prettyLabelFromName(basePrep)} (${seedTypeLabelPrep}) preset. The full preset choice will be visible once the seed is opened.\nSeed-Hash: ${job.seedHash}. Took ${formatDuration(job.durationMs)}.`
+      : `Preparation complete. It was rolled with the ${presetStartLabelPrep} (${seedTypeLabelPrep}) preset.\nSeed-Hash: ${job.seedHash}. Took ${formatDuration(job.durationMs)}.`;
     try { await interaction.followUp({ content: doneMsg, flags: MessageFlags.Ephemeral }); } catch (_) {}
   } catch (e) {
     job.completedAt = getNowMs();
@@ -157,7 +159,7 @@ async function deliverPrepared(interaction, preparedJob) {
   })();
   const seedTypeLabel = prettySeedTypeLabel(preparedJob.seedType);
   const rolledLine = isRandom
-    ? `It was rolled with a random ${presetLabel.replace(' (random)', '')} (${seedTypeLabel}) preset. The full preset choice will be visible once you open the seed.`
+    ? `It was rolled with a random ${presetLabel.replace(' (random)', '')} (${seedTypeLabel}) preset. The full preset choice will be visible once the seed is opened.`
     : `It was rolled with the ${presetLabel} (${seedTypeLabel}) preset.`;
   const content = `<@${interaction.user.id}> **Your seed is ready**!\n ${rolledLine}\nSeed-Hash: ${preparedJob.seedHash}.\nTook ${formatDuration(preparedJob.durationMs)}.`;
   const sent = await interaction.channel.send({ content, files });
