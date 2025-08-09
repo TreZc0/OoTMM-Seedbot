@@ -103,7 +103,7 @@ async function handlePrepare(interaction, seedType, presetValue) {
   const basePrep = isRandomPrep ? presetValue.slice('random:'.length) : presetValue;
   const seedTypeLabelPrep = prettySeedTypeLabel(seedType);
   const presetStartLabelPrep = isRandomPrep ? `${prettyLabelFromName(basePrep)} (random)` : prettyLabelFromName(presetValue);
-  await interaction.reply({ content: `Sure thing! I started generating a seed with the ${prettyPreset} (${seedTypeLabel}) preset. It will not be posted publicly, but available if another user runs /generate with this preset.\nThis can take a few minutes.`, flags: MessageFlags.Ephemeral });
+  await interaction.reply({ content: `Sure thing! I started generating a seed with the ${presetStartLabelPrep} (${seedTypeLabelPrep}) preset. It will not be posted publicly, but available if another user runs /generate with this preset.\nThis can take a few minutes.`, flags: MessageFlags.Ephemeral });
 
   try {
     logDebug('Starting preparation generation', { seedType, preset: presetValue, authorId: interaction.user.id });
@@ -261,7 +261,7 @@ async function handleGenerate(interaction, seedType, presetValue) {
       return job.resolvedPresetName ? prettyLabelFromName(job.resolvedPresetName) : prettyLabelFromName(presetValue);
     })();
     const seedTypeLabel2 = prettySeedTypeLabel(seedType);
-    const content = `<@${interaction.user.id}> **Your seed is ready**!\n It was rolled with the ${presetLabel} (${seedTypeLabel}) preset.\nSeed-Hash: ${preparedJob.seedHash}.\nTook ${formatDuration(preparedJob.durationMs)}.`;
+    const content = `<@${interaction.user.id}> **Your seed is ready**!\n It was rolled with the ${presetLabel} (${seedTypeLabel2}) preset.\nSeed-Hash: ${job.seedHash}.\nTook ${formatDuration(job.durationMs)}.`;
     const sent = await interaction.channel.send({ content, files });
     job.messageId = sent.id;
     state.lastPerUser[interaction.user.id] = job.id;
