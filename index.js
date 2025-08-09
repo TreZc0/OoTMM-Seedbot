@@ -127,6 +127,10 @@ async function handlePrepare(interaction, seedType, presetValue) {
     // keep in active for audit or remove; here we remove from active
     state.active = state.active.filter(j => j.id !== job.id);
     save();
+
+    // Ephemeral completion notice
+    const doneMsg = `Preparation complete for ${seedTypeLabelPrep} / “${presetStartLabelPrep}”.\nSeed-Hash: ${job.seedHash}. Took ${formatDuration(job.durationMs)}.`;
+    try { await interaction.followUp({ content: doneMsg, flags: MessageFlags.Ephemeral }); } catch (_) {}
   } catch (e) {
     job.completedAt = getNowMs();
     job.status = 'failed';
