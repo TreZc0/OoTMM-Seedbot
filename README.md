@@ -1,6 +1,8 @@
-## ootmm-seedbot
+## OoTMM-SeedBot
 
 Discord bot to orchestrate OoTMM seed generation via the external OoTMM CLI.
+The bot includes a queue system to limit amount of generations.
+Slash Commands are used for interaction with users.
 
 ### Setup
 
@@ -16,5 +18,3 @@ Commands are registered for the configured `guildId` at startup.
 - `/prepare preset:<name>`: Runs generation and stores outputs into backlog.
 - `/generate preset:<name>`: Uses a prepared seed if available, otherwise runs full generation, then posts `.ootmm` files.
 - `/spoiler public:<boolean>`: Sends spoiler log (DM or channel with `public: true`).
-
-
