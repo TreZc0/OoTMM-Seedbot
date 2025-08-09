@@ -64,28 +64,31 @@ function prettyLabelFromName(name) {
 function buildPresetChoices(presetsPath) {
   const map = scanSeedTypesAndPresets(presetsPath);
   const seedTypes = Object.keys(map).sort((a, b) => a.localeCompare(b));
-  const baseToHasVariants = new Map();
-  const baseSet = new Set();
-
+  const presetChoices = [];
+  // Build choices across all seed types, but labels are independent of seed type
+  const globalGrouped = {};
   for (const presets of Object.values(map)) {
-    const grouped = {};
     for (const name of presets) {
       const base = toBaseName(name);
-      baseSet.add(base);
-      if (!grouped[base]) grouped[base] = [];
-      grouped[base].push(name);
-    }
-    for (const [base, arr] of Object.entries(grouped)) {
-      if (arr.length > 1) baseToHasVariants.set(base, true);
+      if (!globalGrouped[base]) globalGrouped[base] = new Set();
+      globalGrouped[base].add(name);
     }
   }
 
-  const presetChoices = [];
-  for (const base of Array.from(baseSet).sort((a, b) => a.localeCompare(b))) {
-    const label = prettyLabelFromName(base);
-    presetChoices.push({ value: base, label });
-    if (baseToHasVariants.get(base)) {
-      presetChoices.push({ value: `random:${base}`, label: `${label} (random)` });
+  const bases = Object.keys(globalGrouped).sort((a, b) => a.localeCompare(b));
+  for (const base of bases) {
+    const variants = Array.from(globalGrouped[base]).sort((a, b) => a.localeCompare(b));
+    if (variants.length > 1) {
+      // Add each concrete variant as its own choice
+      for (const variant of variants) {
+        presetChoices.push({ value: variant, label: prettyLabelFromName(variant) });
+      }
+      // Add random choice for this base
+      presetChoices.push({ value: `random:${base}`, label: `${prettyLabelFromName(base)} (random)` });
+    } else {
+      // Only one preset, present as a single choice
+      const only = variants[0];
+      presetChoices.push({ value: only, label: prettyLabelFromName(only) });
     }
   }
   return { seedTypes, presetChoices };
