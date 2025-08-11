@@ -47,15 +47,15 @@ function resolvePresetFile(presetsPath, seedType, presetName) {
 }
 
 function toBaseName(name) {
-  const m = name.match(/^(.*?)-([a-z])$/i);
+  const m = name.match(/^(.*?)-([a-z0-9]+)$/i);
   if (m) return m[1];
   return name;
 }
 
 function prettyLabelFromName(name) {
-  const m = name.match(/^(.*?)-([a-z])$/i);
+  const m = name.match(/^(.*?)-([a-z0-9]+)$/i);
   const base = m ? m[1] : name;
-  const option = m ? m[2].toLowerCase() : null;
+  const option = m ? m[2].toUpperCase() : null;
   const cap = base.replace(/[-_]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   if (option) return `${cap} (Option ${option})`;
   return cap;
@@ -118,7 +118,7 @@ function prettySeedTypeLabel(name) {
   }).join(' ');
 }
 
-module.exports = { scanSeedTypesAndPresets, listSeedTypes, listAllPresets, resolvePresetFile, buildPresetChoices, resolvePresetSelection, prettyLabelFromName, prettySeedTypeLabel };
+module.exports = { scanSeedTypesAndPresets, listSeedTypes, listAllPresets, resolvePresetFile, toBaseName, buildPresetChoices, resolvePresetSelection, prettyLabelFromName, prettySeedTypeLabel };
 
 
 
