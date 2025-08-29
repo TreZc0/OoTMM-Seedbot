@@ -65,6 +65,7 @@ function buildPresetChoices(presetsPath) {
   const map = scanSeedTypesAndPresets(presetsPath);
   const seedTypes = Object.keys(map).sort((a, b) => a.localeCompare(b));
   const presetChoices = [];
+  
   // Build choices across all seed types, but labels are independent of seed type
   const globalGrouped = {};
   for (const presets of Object.values(map)) {
@@ -92,14 +93,18 @@ function buildPresetChoices(presetsPath) {
     }
   }
 
-  // Add one random preset option for each seed type
+  // Add one random preset option for each seed type (only once per seed type)
+  const addedSeedTypes = new Set();
   for (const seedType of seedTypes) {
-    const presets = map[seedType] || [];
-    if (presets.length > 0) {
-      presetChoices.push({ 
-        value: `fullyrandom:${seedType}`, 
-        label: `Random Preset (${prettySeedTypeLabel(seedType)})` 
-      });
+    if (!addedSeedTypes.has(seedType)) {
+      const presets = map[seedType] || [];
+      if (presets.length > 0) {
+        presetChoices.push({ 
+          value: `fullyrandom:${seedType}`, 
+          label: `Random Preset (${prettySeedTypeLabel(seedType)})` 
+        });
+        addedSeedTypes.add(seedType);
+      }
     }
   }
 
