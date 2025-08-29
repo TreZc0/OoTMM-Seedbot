@@ -91,14 +91,38 @@ function buildPresetChoices(presetsPath) {
       presetChoices.push({ value: only, label: prettyLabelFromName(only) });
     }
   }
+
+  // Add fully random option for each seed type
+  for (const seedType of seedTypes) {
+    const presets = map[seedType] || [];
+    if (presets.length > 0) {
+      presetChoices.push({ 
+        value: `fullyrandom:${seedType}`, 
+        label: `Random Preset` 
+      });
+    }
+  }
+
   return { seedTypes, presetChoices };
 }
 
 function resolvePresetSelection(presetsPath, seedType, presetValue) {
   const isRandom = presetValue.startsWith('random:');
+  const isFullyRandom = presetValue.startsWith('fullyrandom:');
   const base = isRandom ? presetValue.slice('random:'.length) : presetValue;
   const map = scanSeedTypesAndPresets(presetsPath);
   const names = map[seedType] || [];
+  
+  // Handle fully random selection
+  if (isFullyRandom) {
+    if (names.length === 0) {
+      return resolvePresetFile(presetsPath, seedType, base);;
+    }
+    // Pick a random preset from all available in this seed type
+    const randomPreset = names[Math.floor(Math.random() * names.length)];
+    return resolvePresetFile(presetsPath, seedType, randomPreset);
+  }
+  
   // exact base file
   const direct = resolvePresetFile(presetsPath, seedType, base);
   if (!isRandom && fs.existsSync(direct)) return direct;
