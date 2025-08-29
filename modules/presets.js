@@ -92,13 +92,13 @@ function buildPresetChoices(presetsPath) {
     }
   }
 
-  // Add fully random option for each seed type
+  // Add one random preset option for each seed type
   for (const seedType of seedTypes) {
     const presets = map[seedType] || [];
     if (presets.length > 0) {
       presetChoices.push({ 
         value: `fullyrandom:${seedType}`, 
-        label: `Random Preset` 
+        label: `Random Preset (${prettySeedTypeLabel(seedType)})` 
       });
     }
   }
