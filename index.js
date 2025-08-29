@@ -284,19 +284,19 @@ async function handleGenerate(interaction, seedType, presetValue) {
     save();
 
     const files = job.patchFiles.map(fp => ({ attachment: fp, name: path.basename(fp) }));
-    const random = typeof presetValue === 'string' && presetValue.startsWith('random:');
-    const isFullyRandom = typeof presetValue === 'string' && presetValue === 'fullyrandom';
-    const presetLabel = (() => {
-      if (random) {
-        const base = presetValue.slice('random:'.length);
-        return `${prettyLabelFromName(base)} (random)`;
-      }
-      if (isFullyRandom) {
-        return `Fully Random (${seedTypeLabel2})`;
-      }
-      return job.resolvedPresetName ? prettyLabelFromName(job.resolvedPresetName) : prettyLabelFromName(presetValue);
-    })();
-    const seedTypeLabel2 = prettySeedTypeLabel(seedType);
+     const random = typeof presetValue === 'string' && presetValue.startsWith('random:');
+     const isFullyRandom = typeof presetValue === 'string' && presetValue === 'fullyrandom';
+     const seedTypeLabel2 = prettySeedTypeLabel(seedType);
+     const presetLabel = (() => {
+       if (random) {
+         const base = presetValue.slice('random:'.length);
+         return `${prettyLabelFromName(base)} (random)`;
+       }
+       if (isFullyRandom) {
+         return `Fully Random (${seedTypeLabel2})`;
+       }
+       return job.resolvedPresetName ? prettyLabelFromName(job.resolvedPresetName) : prettyLabelFromName(presetValue);
+     })();
     const rolledLine2 = random
       ? `I was tasked to pick a random ${presetLabel.replace(' (random)', '')} (${seedTypeLabel2}) preset. The preset I chose is: **${job.resolvedPresetName}**.`
       : isFullyRandom
