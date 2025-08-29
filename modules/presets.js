@@ -93,27 +93,18 @@ function buildPresetChoices(presetsPath) {
     }
   }
 
-  // Add one random preset option for each seed type (only once per seed type)
-  const addedSeedTypes = new Set();
-  for (const seedType of seedTypes) {
-    if (!addedSeedTypes.has(seedType)) {
-      const presets = map[seedType] || [];
-      if (presets.length > 0) {
-        presetChoices.push({ 
-          value: `fullyrandom:${seedType}`, 
-          label: `Random Preset (${prettySeedTypeLabel(seedType)})` 
-        });
-        addedSeedTypes.add(seedType);
-      }
-    }
-  }
+  // Add only one "Random Preset" option that works across all seed types
+  presetChoices.push({ 
+    value: `fullyrandom`, 
+    label: `Random Preset` 
+  });
 
   return { seedTypes, presetChoices };
 }
 
 function resolvePresetSelection(presetsPath, seedType, presetValue) {
   const isRandom = presetValue.startsWith('random:');
-  const isFullyRandom = presetValue.startsWith('fullyrandom:');
+  const isFullyRandom = presetValue === 'fullyrandom';
   const base = isRandom ? presetValue.slice('random:'.length) : presetValue;
   const map = scanSeedTypesAndPresets(presetsPath);
   const names = map[seedType] || [];
@@ -121,7 +112,7 @@ function resolvePresetSelection(presetsPath, seedType, presetValue) {
   // Handle fully random selection
   if (isFullyRandom) {
     if (names.length === 0) {
-      return resolvePresetFile(presetsPath, seedType, base);;
+      return resolvePresetFile(presetsPath, seedType, base);
     }
     // Pick a random preset from all available in this seed type
     const randomPreset = names[Math.floor(Math.random() * names.length)];

@@ -100,7 +100,7 @@ async function handlePrepare(interaction, seedType, presetValue) {
   state.active.push(job); save();
 
   const isRandomPrep = typeof presetValue === 'string' && presetValue.startsWith('random:');
-  const isFullyRandomPrep = typeof presetValue === 'string' && presetValue.startsWith('fullyrandom:');
+  const isFullyRandomPrep = typeof presetValue === 'string' && presetValue === 'fullyrandom';
   const basePrep = isRandomPrep ? presetValue.slice('random:'.length) : presetValue;
   const seedTypeLabelPrep = prettySeedTypeLabel(seedType);
   const presetStartLabelPrep = isRandomPrep ? `${prettyLabelFromName(basePrep)} (random)` : 
@@ -157,7 +157,7 @@ async function handlePrepare(interaction, seedType, presetValue) {
 async function deliverPrepared(interaction, preparedJob) {
   const files = preparedJob.patchFiles.map(fp => ({ attachment: fp, name: path.basename(fp) }));
   const isRandom = typeof preparedJob.presetName === 'string' && preparedJob.presetName.startsWith('random:');
-  const isFullyRandom = typeof preparedJob.presetName === 'string' && preparedJob.presetName.startsWith('fullyrandom:');
+  const isFullyRandom = typeof preparedJob.presetName === 'string' && preparedJob.presetName === 'fullyrandom';
   const presetLabel = (() => {
     if (isRandom) {
       const base = preparedJob.presetName.slice('random:'.length);
@@ -253,7 +253,7 @@ async function handleGenerate(interaction, seedType, presetValue) {
   state.active.push(job); save();
 
   const isRandom = typeof presetValue === 'string' && presetValue.startsWith('random:');
-  const isFullyRandom = typeof presetValue === 'string' && presetValue.startsWith('fullyrandom:');
+  const isFullyRandom = typeof presetValue === 'string' && presetValue === 'fullyrandom';
   const base = isRandom ? presetValue.slice('random:'.length) : presetValue;
   const seedTypeLabel = prettySeedTypeLabel(seedType);
   const prettyPreset = isRandom ? `${prettyLabelFromName(base)} (random)` : 
@@ -285,7 +285,7 @@ async function handleGenerate(interaction, seedType, presetValue) {
 
     const files = job.patchFiles.map(fp => ({ attachment: fp, name: path.basename(fp) }));
     const random = typeof presetValue === 'string' && presetValue.startsWith('random:');
-    const isFullyRandom = typeof presetValue === 'string' && presetValue.startsWith('fullyrandom:');
+    const isFullyRandom = typeof presetValue === 'string' && presetValue === 'fullyrandom';
     const presetLabel = (() => {
       if (random) {
         const base = presetValue.slice('random:'.length);
