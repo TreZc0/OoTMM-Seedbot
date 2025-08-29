@@ -135,9 +135,9 @@ async function handlePrepare(interaction, seedType, presetValue) {
 
     // Ephemeral completion notice
     const doneMsg = isRandomPrep
-      ? `Preparation complete. I was tasked to choose a random${prettyLabelFromName(basePrep)} (${seedTypeLabelPrep}) preset. The preset I chose is: **${job.resolvedPresetName}**.\nSeed-Hash: ${job.seedHash}. Took ${formatDuration(job.durationMs)}.`
+      ? `Preparation complete. I was tasked to choose a random ${prettyLabelFromName(basePrep)} (${seedTypeLabelPrep}) preset. The preset I chose is: **${job.resolvedPresetName}**.\nSeed-Hash: ${job.seedHash}. Took ${formatDuration(job.durationMs)}.`
       : isFullyRandomPrep
-      ? `Preparation complete. I was tasked to choose an entirely random preset. The preset I chose is: **${job.resolvedPresetName}**.\nSeed-Hash: ${job.seedHash}. The generation took ${formatDuration(job.durationMs)}.`
+      ? `Preparation complete. I was tasked to choose an entirely random preset. The preset I chose is: **${job.resolvedPresetName}** (${seedTypeLabelPrep})\nSeed-Hash: ${job.seedHash}. The generation took ${formatDuration(job.durationMs)}.`
       : `Preparation complete. It was rolled with the ${presetStartLabelPrep} (${seedTypeLabelPrep}) preset.\nSeed-Hash: ${job.seedHash}. Took ${formatDuration(job.durationMs)}.`;
     try { await interaction.followUp({ content: doneMsg, flags: MessageFlags.Ephemeral }); } catch (_) {}
   } catch (e) {
@@ -172,7 +172,7 @@ async function deliverPrepared(interaction, preparedJob) {
   const rolledLine = isRandom
     ? `I was tasked to pick a random ${presetLabel.replace(' (random)', '')} (${seedTypeLabel}) preset. The preset I chose is: **${preparedJob.resolvedPresetName}**.`
     : isFullyRandom
-    ? `I was tasked to pick an entirely random preset. The preset I chose is: **${preparedJob.resolvedPresetName}**.`
+    ? `I was tasked to pick an entirely random preset. The preset I chose is: **${preparedJob.resolvedPresetName}** (${seedTypeLabel})`
     : `It was rolled with the ${presetLabel} (${seedTypeLabel}) preset.`;
   const content = `<@${interaction.user.id}> **Your seed is ready**!\n${rolledLine}\nSeed-Hash: ${preparedJob.seedHash}.\nTook ${formatDuration(preparedJob.durationMs)}.`;
   const sent = await interaction.channel.send({ content, files });
@@ -300,7 +300,7 @@ async function handleGenerate(interaction, seedType, presetValue) {
     const rolledLine2 = random
       ? `I was tasked to pick a random ${presetLabel.replace(' (random)', '')} (${seedTypeLabel2}) preset. The preset I chose is: **${job.resolvedPresetName}**.`
       : isFullyRandom
-      ? `I was tasked to pick an entirely random preset. The preset I chose is: **${job.resolvedPresetName}**.`
+      ? `I was tasked to pick an entirely random preset. The preset I chose is: **${job.resolvedPresetName}** (${seedTypeLabel2})`
       : `It was rolled with the ${presetLabel} (${seedTypeLabel2}) preset.`;
     const content = `<@${interaction.user.id}> **Your seed is ready**!\n${rolledLine2}\nSeed-Hash: ${job.seedHash}.\nTook ${formatDuration(job.durationMs)}.`;
     const sent = await interaction.channel.send({ content, files });
