@@ -188,7 +188,7 @@ async function handleInfo(interaction) {
     .setColor(0x5B2D82)
     .setThumbnail('https://ootmm.com/assets/logo-CeNcdzMo.png')
     .addFields(
-      { name: 'How it works', value: 'OoTMM Randomizer seeds are rolled based on your selected seed type (Solo, Solo Multiworld (3 Players), Race Multiworld (2 Teams of 3 players)) and preset. If the queue is full, please wait and try again. Random presets pick one of the available variant options.' },
+      { name: 'How it works', value: 'OoTMM Randomizer seeds are rolled based on your selected seed type (Solo, Solo Multiworld (3 Players), Duo Multiworld (2 Players), Race Multiworld (2 Teams of 3 players)) and preset. If the queue is full, please wait and try again. Random presets pick one of the available variant options.' },
       { name: 'Commands', value: '**/generate** – generates a new seed rolled with a preset of choice\n**/spoiler** – gets the spoiler log for your most recent seed' },
       { name: 'Concurrency', value: `Up to ${cfg.maxParallel} seed(s) can be rolled at the same time.` },
       { name: 'Outputs', value: 'When ready, the bot posts .ootmm patch file(s) and the seed hash which you can compare to your patch file name. Spoilers are never posted automatically; use /spoiler to retrieve them (DM by default).' }
